@@ -5,74 +5,74 @@
     <title>投資觀察站</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --accent-red: #ef4444; --accent-yellow: #f59e0b; --accent-green: #10b981; --border: #334155; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding-bottom: 50px; }
-        .marquee { background: #1e293b; color: #fbbf24; padding: 12px; overflow: hidden; white-space: nowrap; border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 100; font-weight: bold; }
-        .marquee-inner { display: inline-block; animation: move 25s linear infinite; }
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --red: #ef4444; --yellow: #f59e0b; --green: #10b981; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; line-height: 1.5; }
+        .marquee { background: #1e293b; color: #fbbf24; padding: 15px; overflow: hidden; white-space: nowrap; border-bottom: 2px solid #334155; position: sticky; top: 0; z-index: 100; font-weight: bold; font-size: 1.1rem; }
+        .marquee-inner { display: inline-block; animation: move 20s linear infinite; }
         @keyframes move { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
-        .container { max-width: 1000px; margin: 20px auto; padding: 0 20px; }
-        .card { background: var(--card); border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border); overflow: hidden; }
-        .card-header { padding: 15px 20px; font-weight: bold; background: rgba(0,0,0,0.2); }
-        .red-l { border-left: 6px solid var(--accent-red); color: var(--accent-red); }
-        .yellow-l { border-left: 6px solid var(--accent-yellow); color: var(--accent-yellow); }
-        .green-l { border-left: 6px solid var(--accent-green); color: var(--accent-green); }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        th { background: rgba(0,0,0,0.1); color: #94a3b8; font-size: 0.8rem; text-align: left; padding: 12px 20px; }
-        td { padding: 15px 20px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
+        .card { background: var(--card); border-radius: 15px; margin-bottom: 25px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .card-header { padding: 15px 20px; font-weight: bold; background: rgba(0,0,0,0.3); font-size: 1.1rem; display: flex; align-items: center; }
+        .red-h { border-left: 8px solid var(--red); color: var(--red); }
+        .yellow-h { border-left: 8px solid var(--yellow); color: var(--yellow); }
+        .green-h { border-left: 8px solid var(--green); color: var(--green); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: rgba(0,0,0,0.2); text-align: left; padding: 12px 20px; font-size: 0.85rem; color: #94a3b8; }
+        td { padding: 18px 20px; border-bottom: 1px solid #334155; }
+        .empty { padding: 40px; text-align: center; color: #64748b; }
     </style>
 </head>
 <body>
-    <div class="marquee"><div class="marquee-inner" id="mq_display">載入中...</div></div>
-    <div class="container" id="content">載入中...</div>
+    <div class="marquee"><div class="marquee-inner" id="mq_display">📡 正在與伺服器連線...</div></div>
+    <div class="container" id="content"></div>
 
     <script>
         const SB_URL = 'https://twifrdbdounfujiqhght.supabase.co';
         const SB_KEY = 'sb_publishable_OGGoB158Uy2q1h5-jREvOA_683tvRv7';
         const supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        async function loadViewer() {
-            const { data: set } = await supabase.from('settings').select('*').single();
+        async function loadData() {
+            const { data: set } = await supabase.from('settings').select('marquee_text').eq('id', 1).single();
             if(set) document.getElementById('mq_display').innerText = set.marquee_text;
 
             const { data: stocks } = await supabase.from('stocks').select('*');
-            renderUI(stocks || []);
+            render(stocks || []);
         }
 
-        function renderUI(stocks) {
-            const groups = { 
-                red: { title: '🔴 短期 (3個月)', class: 'red-l' },
-                yellow: { title: '🟡 中長 (3-6個月)', class: 'yellow-l' },
-                green: { title: '🟢 長線 (1年以上)', class: 'green-l' }
+        function render(stocks) {
+            const config = {
+                red: { t: '🔴 短期觀察標的', c: 'red-h' },
+                yellow: { t: '🟡 中長週期佈局', c: 'yellow-h' },
+                green: { t: '🟢 長線核心持有', c: 'green-h' }
             };
             let html = '';
-            for (let key in groups) {
-                const filtered = stocks.filter(s => s.level === key);
+            ['red', 'yellow', 'green'].forEach(lv => {
+                const list = stocks.filter(s => s.level === lv);
                 html += `
                 <div class="card">
-                    <div class="card-header ${groups[key].class}">${groups[key].title}</div>
+                    <div class="card-header ${config[lv].c}">${config[lv].t}</div>
                     <div style="overflow-x:auto">
                         <table>
-                            <thead><tr><th>名稱</th><th>日期</th><th>價格</th><th>理由</th><th>狀態</th></tr></thead>
+                            <thead><tr><th>標的名稱</th><th>買入日期</th><th>買入/目標</th><th>分析理由</th><th>目前狀態</th></tr></thead>
                             <tbody>
-                                ${filtered.length ? filtered.map(s => `
+                                ${list.length ? list.map(s => `
                                     <tr>
                                         <td><b>${s.name}</b></td>
-                                        <td>${s.buy_date}</td>
-                                        <td>成本: ${s.buy_price} <br><small style="color:var(--accent-red)">目標: ${s.limit_price}</small></td>
-                                        <td style="max-width:200px">${s.reason}</td>
-                                        <td>${s.status}</td>
-                                    </tr>
-                                `).join('') : '<tr><td colspan="5" style="text-align:center">目前無資料</td></tr>'}
+                                        <td>${s.buy_date || '-'}</td>
+                                        <td>${s.buy_price} <br><small style="color:#94a3b8">→ ${s.limit_price}</small></td>
+                                        <td style="max-width:300px; font-size: 0.9rem;">${s.reason}</td>
+                                        <td><span style="background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px;">${s.status}</span></td>
+                                    </tr>`).join('') : '<tr><td colspan="5" class="empty">此區域尚無紀錄</td></tr>'}
                             </tbody>
                         </table>
                     </div>
                 </div>`;
-            }
+            });
             document.getElementById('content').innerHTML = html;
         }
 
-        supabase.channel('room1').on('postgres_changes', { event: '*', schema: 'public' }, () => loadViewer()).subscribe();
-        loadViewer();
+        supabase.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => loadData()).subscribe();
+        loadData();
     </script>
 </body>
 </html>
