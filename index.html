@@ -16,6 +16,8 @@
         .red-h { border-left: 8px solid var(--red); color: var(--red); }
         .yellow-h { border-left: 8px solid var(--yellow); color: var(--yellow); }
         .green-h { border-left: 8px solid var(--green); color: var(--green); }
+        .history-h { border-left: 8px solid #94a3b8; color: #94a3b8; }
+        .profit-h { border-left: 8px solid #a855f7; color: #a855f7; }
         table { width: 100%; border-collapse: collapse; }
         th { background: rgba(0,0,0,0.2); text-align: left; padding: 12px 20px; font-size: 0.85rem; color: #94a3b8; }
         td { padding: 18px 20px; border-bottom: 1px solid #334155; }
@@ -29,20 +31,11 @@
     <script>
     const SB_URL = 'https://twifrdbdounfujiqhght.supabase.co';
     const SB_KEY = 'sb_publishable_OGGoB158Uy2q1h5-jREvOA_683tvRv7';
-
-    // ✅ 改名
     const client = supabase.createClient(SB_URL, SB_KEY);
 
     async function loadData() {
-        const { data: set } = await client
-            .from('settings')
-            .select('marquee_text')
-            .eq('id', 1)
-            .single();
-
-        if (set) {
-            document.getElementById('mq_display').innerText = set.marquee_text;
-        }
+        const { data: set } = await client.from('settings').select('marquee_text').eq('id', 1).single();
+        if (set) document.getElementById('mq_display').innerText = set.marquee_text;
 
         const { data: stocks } = await client.from('stocks').select('*');
         render(stocks || []);
@@ -57,9 +50,9 @@
 
         let html = '';
 
+        // 1. 渲染三個等級的持有中清單
         ['red', 'yellow', 'green'].forEach(lv => {
             const list = stocks.filter(s => s.level === lv && s.status === 'active');
-
             html += `
             <div class="card">
                 <div class="card-header ${config[lv].c}">${config[lv].t}</div>
@@ -75,37 +68,84 @@
                             </tr>
                         </thead>
                         <tbody>
-                            ${
-                                list.length
-                                    ? list.map(s => `
-                                    <tr>
-                                        <td><b>${s.name}</b></td>
-                                        <td>${s.buy_date || '-'}</td>
-                                        <td>${s.buy_price}<br><small>→ ${s.limit_price}</small></td>
-                                        <td style="max-width:300px;">${s.reason}</td>
-                                        <td>${s.status}</td>
-                                    </tr>
-                                `).join('')
-                                    : '<tr><td colspan="5" class="empty">此區域尚無紀錄</td></tr>'
-                            }
+                            ${list.length ? list.map(s => `
+                                <tr>
+                                    <td><b>${s.name}</b></td>
+                                    <td>${s.buy_date || '-'}</td>
+                                    <td>${s.buy_price}<br><small>→ ${s.limit_price}</small></td>
+                                    <td style="max-width:300px;">${s.reason}</td>
+                                    <td>${s.status}</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="5" class="empty">此區域尚無紀錄</td></tr>'}
                         </tbody>
                     </table>
                 </div>
             </div>`;
         });
 
+        // 2. 歷史區（已賣出）
+        const history = stocks.filter(s => s.status === 'sold');
+        let historyHTML = `
+        <div class="card">
+            <div class="card-header history-h">📜 歷史交易 (已實現結案)</div>
+            <div style="overflow-x:auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>名稱</th>
+                            <th>買入價</th>
+                            <th>賣出價</th>
+                            <th>股數</th>
+                            <th>損益</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        if (history.length) {
+            history.forEach(s => {
+                const profit = (s.sold_price - s.buy_price) * s.shares;
+                const pColor = profit >= 0 ? 'var(--red)' : 'var(--green)';
+                historyHTML += `
+                <tr>
+                    <td><b>${s.name}</b></td>
+                    <td>${s.buy_price}</td>
+                    <td>${s.sold_price}</td>
+                    <td>${s.shares}</td>
+                    <td style="color:${pColor}; font-weight:bold;">${profit > 0 ? '+' : ''}${profit.toLocaleString()}</td>
+                </tr>`;
+            });
+        } else {
+            historyHTML += `<tr><td colspan="5" class="empty">尚無歷史資料</td></tr>`;
+        }
+        historyHTML += `</tbody></table></div></div>`;
+        html += historyHTML;
+
+        // 3. 總損益
+        const totalProfit = history.reduce((sum, s) => {
+            return sum + (s.sold_price - s.buy_price) * s.shares;
+        }, 0);
+
+        const totalColor = totalProfit >= 0 ? 'var(--red)' : 'var(--green)';
+
+        html += `
+        <div class="card">
+            <div class="card-header profit-h">📊 累積總損益</div>
+            <div style="padding:25px; font-size:28px; font-weight:bold; color:${totalColor}; text-align:center;">
+                $ ${totalProfit.toLocaleString()}
+            </div>
+        </div>
+        `;
+
         document.getElementById('content').innerHTML = html;
     }
 
-    // ✅ Realtime 監聽
-    client
-        .channel('db-changes')
-        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-            loadData();
-        })
-        .subscribe();
+    // Realtime 監聽
+    client.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        loadData();
+    }).subscribe();
 
     loadData();
-</script>
+    </script>
 </body>
 </html>
