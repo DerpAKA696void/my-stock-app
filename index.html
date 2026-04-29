@@ -58,7 +58,7 @@
         let html = '';
 
         ['red', 'yellow', 'green'].forEach(lv => {
-            const list = stocks.filter(s => s.level === lv);
+            const list = stocks.filter(s => s.level === lv && s.status === 'active');
 
             html += `
             <div class="card">
