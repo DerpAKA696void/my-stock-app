@@ -22,12 +22,12 @@
     </style>
 </head>
 <body>
-    <div class="marquee"><div class="marquee-inner" id="mq_display">連線中...</div></div>
+    <div class="marquee"><div class="marquee-inner" id="mq_display">載入中...</div></div>
     <div class="container" id="content">載入中...</div>
 
     <script>
         const SB_URL = 'https://twifrdbdounfujiqhght.supabase.co';
-        const SB_KEY = '你的_ANON_KEY';
+        const SB_KEY = 'sb_publishable_OGGoB158Uy2q1h5-jREvOA_683tvRv7';
         const supabase = supabase.createClient(SB_URL, SB_KEY);
 
         async function loadViewer() {
@@ -44,7 +44,6 @@
                 yellow: { title: '🟡 中長 (3-6個月)', class: 'yellow-l' },
                 green: { title: '🟢 長線 (1年以上)', class: 'green-l' }
             };
-
             let html = '';
             for (let key in groups) {
                 const filtered = stocks.filter(s => s.level === key);
@@ -59,7 +58,7 @@
                                     <tr>
                                         <td><b>${s.name}</b></td>
                                         <td>${s.buy_date}</td>
-                                        <td>${s.buy_price} <br><small style="color:var(--accent-red)">${s.limit_price}</small></td>
+                                        <td>成本: ${s.buy_price} <br><small style="color:var(--accent-red)">目標: ${s.limit_price}</small></td>
                                         <td style="max-width:200px">${s.reason}</td>
                                         <td>${s.status}</td>
                                     </tr>
@@ -72,7 +71,7 @@
             document.getElementById('content').innerHTML = html;
         }
 
-        supabase.channel('any').on('postgres_changes', { event: '*', schema: 'public' }, () => loadViewer()).subscribe();
+        supabase.channel('room1').on('postgres_changes', { event: '*', schema: 'public' }, () => loadViewer()).subscribe();
         loadViewer();
     </script>
 </body>
