@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>投資觀察站</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 使用與 Admin 相同的 CSS，但移除表單樣式 */
+        /* ... 此處建議貼上你最喜歡的深色模式 CSS ... */
+        /* (為節省長度，此處僅放關鍵跑馬燈) */
+        .marquee { background: #1e293b; color: #fbbf24; padding: 10px; overflow: hidden; white-space: nowrap; border-bottom: 2px solid #334155; }
+        .marquee-inner { display: inline-block; animation: move 20s linear infinite; }
+        @keyframes move { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+        .card { background: #1e293b; margin: 20px; border-radius: 12px; border-left: 6px solid #ccc; }
+        .red { border-color: #ef4444; } .yellow { border-color: #f59e0b; } .green { border-color: #10b981; }
+    </style>
+</head>
+<body>
+    <div class="marquee"><div class="marquee-inner" id="mq_display">連線中...</div></div>
+    <div id="content"></div>
+
+    <script>
+        const SB_URL = '你的_SUPABASE_URL';
+        const SB_KEY = '你的_SUPABASE_ANON_KEY';
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function loadViewer() {
+            // 抓公告
+            const { data: set } = await supabase.from('settings').select('*').single();
+            document.getElementById('mq_display').innerText = set.marquee_text;
+
+            // 抓股票並渲染
+            const { data: stocks } = await supabase.from('stocks').select('*');
+            renderUI(stocks);
+        }
+
+        function renderUI(stocks) {
+            // 將 stocks 依照 red/yellow/green 分類並轉為 HTML 顯示
+            // (此處邏輯與之前提供給你的渲染函數相同)
+        }
+
+        // 重點：開啟 Realtime 監聽
+        supabase.channel('room1')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'stocks' }, payload => {
+                loadViewer(); // 資料庫一變就重抓
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
+                loadViewer(); 
+            })
+            .subscribe();
+
+        loadViewer();
+    </script>
+</body>
+</html>
