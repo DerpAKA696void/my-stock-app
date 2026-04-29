@@ -27,52 +27,85 @@
     <div class="container" id="content"></div>
 
     <script>
-        const SB_URL = 'https://twifrdbdounfujiqhght.supabase.co';
-        const SB_KEY = 'sb_publishable_OGGoB158Uy2q1h5-jREvOA_683tvRv7';
-        const supabase = supabase.createClient(SB_URL, SB_KEY);
+    const SB_URL = 'https://twifrdbdounfujiqhght.supabase.co';
+    const SB_KEY = 'sb_publishable_OGGoB158Uy2q1h5-jREvOA_683tvRv7';
 
-        async function loadData() {
-            const { data: set } = await supabase.from('settings').select('marquee_text').eq('id', 1).single();
-            if(set) document.getElementById('mq_display').innerText = set.marquee_text;
+    // ✅ 改名
+    const client = supabase.createClient(SB_URL, SB_KEY);
 
-            const { data: stocks } = await supabase.from('stocks').select('*');
-            render(stocks || []);
+    async function loadData() {
+        const { data: set } = await client
+            .from('settings')
+            .select('marquee_text')
+            .eq('id', 1)
+            .single();
+
+        if (set) {
+            document.getElementById('mq_display').innerText = set.marquee_text;
         }
 
-        function render(stocks) {
-            const config = {
-                red: { t: '🔴 短期觀察標的', c: 'red-h' },
-                yellow: { t: '🟡 中長週期佈局', c: 'yellow-h' },
-                green: { t: '🟢 長線核心持有', c: 'green-h' }
-            };
-            let html = '';
-            ['red', 'yellow', 'green'].forEach(lv => {
-                const list = stocks.filter(s => s.level === lv);
-                html += `
-                <div class="card">
-                    <div class="card-header ${config[lv].c}">${config[lv].t}</div>
-                    <div style="overflow-x:auto">
-                        <table>
-                            <thead><tr><th>標的名稱</th><th>買入日期</th><th>買入/目標</th><th>分析理由</th><th>目前狀態</th></tr></thead>
-                            <tbody>
-                                ${list.length ? list.map(s => `
+        const { data: stocks } = await client.from('stocks').select('*');
+        render(stocks || []);
+    }
+
+    function render(stocks) {
+        const config = {
+            red: { t: '🔴 短期觀察標的', c: 'red-h' },
+            yellow: { t: '🟡 中長週期佈局', c: 'yellow-h' },
+            green: { t: '🟢 長線核心持有', c: 'green-h' }
+        };
+
+        let html = '';
+
+        ['red', 'yellow', 'green'].forEach(lv => {
+            const list = stocks.filter(s => s.level === lv);
+
+            html += `
+            <div class="card">
+                <div class="card-header ${config[lv].c}">${config[lv].t}</div>
+                <div style="overflow-x:auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>標的名稱</th>
+                                <th>買入日期</th>
+                                <th>買入/目標</th>
+                                <th>分析理由</th>
+                                <th>目前狀態</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${
+                                list.length
+                                    ? list.map(s => `
                                     <tr>
                                         <td><b>${s.name}</b></td>
                                         <td>${s.buy_date || '-'}</td>
-                                        <td>${s.buy_price} <br><small style="color:#94a3b8">→ ${s.limit_price}</small></td>
-                                        <td style="max-width:300px; font-size: 0.9rem;">${s.reason}</td>
-                                        <td><span style="background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px;">${s.status}</span></td>
-                                    </tr>`).join('') : '<tr><td colspan="5" class="empty">此區域尚無紀錄</td></tr>'}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>`;
-            });
-            document.getElementById('content').innerHTML = html;
-        }
+                                        <td>${s.buy_price}<br><small>→ ${s.limit_price}</small></td>
+                                        <td style="max-width:300px;">${s.reason}</td>
+                                        <td>${s.status}</td>
+                                    </tr>
+                                `).join('')
+                                    : '<tr><td colspan="5" class="empty">此區域尚無紀錄</td></tr>'
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        });
 
-        supabase.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => loadData()).subscribe();
-        loadData();
-    </script>
+        document.getElementById('content').innerHTML = html;
+    }
+
+    // ✅ Realtime 監聽
+    client
+        .channel('db-changes')
+        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+            loadData();
+        })
+        .subscribe();
+
+    loadData();
+</script>
 </body>
 </html>
