@@ -1,151 +1,262 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <title>投資觀察站</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --red: #ef4444; --yellow: #f59e0b; --green: #10b981; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; line-height: 1.5; }
-        .marquee { background: #1e293b; color: #fbbf24; padding: 15px; overflow: hidden; white-space: nowrap; border-bottom: 2px solid #334155; position: sticky; top: 0; z-index: 100; font-weight: bold; font-size: 1.1rem; }
-        .marquee-inner { display: inline-block; animation: move 20s linear infinite; }
-        @keyframes move { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
-        .container { max-width: 1100px; margin: 20px auto; padding: 0 15px; }
-        .card { background: var(--card); border-radius: 15px; margin-bottom: 25px; border: 1px solid #334155; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .card-header { padding: 15px 20px; font-weight: bold; background: rgba(0,0,0,0.3); font-size: 1.1rem; display: flex; align-items: center; }
-        .red-h { border-left: 8px solid var(--red); color: var(--red); }
-        .yellow-h { border-left: 8px solid var(--yellow); color: var(--yellow); }
-        .green-h { border-left: 8px solid var(--green); color: var(--green); }
-        .history-h { border-left: 8px solid #94a3b8; color: #94a3b8; }
-        .profit-h { border-left: 8px solid #a855f7; color: #a855f7; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: rgba(0,0,0,0.2); text-align: left; padding: 12px 20px; font-size: 0.85rem; color: #94a3b8; }
-        td { padding: 18px 20px; border-bottom: 1px solid #334155; }
-        .empty { padding: 40px; text-align: center; color: #64748b; }
-    </style>
+<meta charset="UTF-8">
+<title>投資觀察站</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root {
+--bg:#0f172a;
+--card:#1e293b;
+--text:#f1f5f9;
+--red:#ef4444;
+--yellow:#f59e0b;
+--green:#10b981;
+}
+
+body {
+background:var(--bg);
+color:var(--text);
+font-family:sans-serif;
+margin:0;
+}
+
+.marquee {
+background:#1e293b;
+color:#fbbf24;
+padding:15px;
+overflow:hidden;
+white-space:nowrap;
+border-bottom:2px solid #334155;
+position:sticky;
+top:0;
+font-weight:bold;
+}
+
+.marquee-inner {
+display:inline-block;
+animation:move 20s linear infinite;
+}
+
+@keyframes move {
+from { transform:translateX(100vw); }
+to { transform:translateX(-100%); }
+}
+
+.container {
+max-width:1100px;
+margin:20px auto;
+padding:0 15px;
+}
+
+.card {
+background:var(--card);
+border-radius:15px;
+margin-bottom:25px;
+border:1px solid #334155;
+overflow:hidden;
+}
+
+.card-header {
+padding:15px;
+font-weight:bold;
+}
+
+.red-h { border-left:8px solid var(--red); color:var(--red); }
+.yellow-h { border-left:8px solid var(--yellow); color:var(--yellow); }
+.green-h { border-left:8px solid var(--green); color:var(--green); }
+.history-h { border-left:8px solid #94a3b8; }
+.profit-h { border-left:8px solid #a855f7; }
+
+table {
+width:100%;
+border-collapse:collapse;
+}
+
+th {
+background:rgba(0,0,0,0.2);
+padding:10px;
+font-size:13px;
+color:#94a3b8;
+}
+
+td {
+padding:15px;
+border-bottom:1px solid #334155;
+}
+
+.empty {
+padding:30px;
+text-align:center;
+color:#64748b;
+}
+</style>
 </head>
+
 <body>
-    <div class="marquee"><div class="marquee-inner" id="mq_display">📡 正在與伺服器連線...</div></div>
-    <div class="container" id="content"></div>
 
-    <script>
-    const SB_URL = 'https://twifrdbdounfujiqhght.supabase.co';
-    const SB_KEY = 'sb_publishable_OGGoB158Uy2q1h5-jREvOA_683tvRv7';
-    const client = supabase.createClient(SB_URL, SB_KEY);
+<div class="marquee">
+<div class="marquee-inner" id="mq_display">載入中...</div>
+</div>
 
-    async function loadData() {
-        const { data: set } = await client.from('settings').select('marquee_text').eq('id', 1).single();
-        if (set) document.getElementById('mq_display').innerText = set.marquee_text;
+<div class="container" id="content"></div>
 
-        const { data: stocks } = await client.from('stocks').select('*');
-        render(stocks || []);
-    }
+<script>
+const client = supabase.createClient(
+'https://twifrdbdounfujiqhght.supabase.co',
+'sb_publishable_OGGoB158Uy2q1h5-jREvOA_683tvRv7'
+);
 
-    function render(stocks) {
-        const config = {
-            red: { t: '🔴 短期觀察標的', c: 'red-h' },
-            yellow: { t: '🟡 中長週期佈局', c: 'yellow-h' },
-            green: { t: '🟢 長線核心持有', c: 'green-h' }
-        };
+async function loadData(){
 
-        let html = '';
+// 跑馬燈
+const { data:set } = await client.from('settings')
+.select('marquee_text')
+.eq('id',1)
+.single();
 
-        // 1. 渲染三個等級的持有中清單
-        ['red', 'yellow', 'green'].forEach(lv => {
-            const list = stocks.filter(s => s.level === lv && s.status === 'active');
-            html += `
-            <div class="card">
-                <div class="card-header ${config[lv].c}">${config[lv].t}</div>
-                <div style="overflow-x:auto">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>標的名稱</th>
-                                <th>買入日期</th>
-                                <th>買入/目標</th>
-                                <th>分析理由</th>
-                                <th>目前狀態</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${list.length ? list.map(s => `
-                                <tr>
-                                    <td><b>${s.name}</b></td>
-                                    <td>${s.buy_date || '-'}</td>
-                                    <td>${s.buy_price}<br><small>→ ${s.limit_price}</small></td>
-                                    <td style="max-width:300px;">${s.reason}</td>
-                                    <td>${s.status}</td>
-                                </tr>
-                            `).join('') : '<tr><td colspan="5" class="empty">此區域尚無紀錄</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-        });
+if(set){
+document.getElementById('mq_display').innerText = set.marquee_text;
+}
 
-        // 2. 歷史區（已賣出）
-        const history = stocks.filter(s => s.status === 'sold');
-        let historyHTML = `
-        <div class="card">
-            <div class="card-header history-h">📜 歷史交易 (已實現結案)</div>
-            <div style="overflow-x:auto">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>名稱</th>
-                            <th>買入價</th>
-                            <th>賣出價</th>
-                            <th>股數</th>
-                            <th>損益</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+// 股票
+const { data:stocks } = await client.from('stocks').select('*');
 
-        if (history.length) {
-            history.forEach(s => {
-                const profit = (s.sold_price - s.buy_price) * s.shares;
-                const pColor = profit >= 0 ? 'var(--red)' : 'var(--green)';
-                historyHTML += `
-                <tr>
-                    <td><b>${s.name}</b></td>
-                    <td>${s.buy_price}</td>
-                    <td>${s.sold_price}</td>
-                    <td>${s.shares}</td>
-                    <td style="color:${pColor}; font-weight:bold;">${profit > 0 ? '+' : ''}${profit.toLocaleString()}</td>
-                </tr>`;
-            });
-        } else {
-            historyHTML += `<tr><td colspan="5" class="empty">尚無歷史資料</td></tr>`;
-        }
-        historyHTML += `</tbody></table></div></div>`;
-        html += historyHTML;
+render(stocks || []);
+}
 
-        // 3. 總損益
-        const totalProfit = history.reduce((sum, s) => {
-            return sum + (s.sold_price - s.buy_price) * s.shares;
-        }, 0);
+function render(stocks){
 
-        const totalColor = totalProfit >= 0 ? 'var(--red)' : 'var(--green)';
+const config = {
+red:{ t:'🔴 短期觀察', c:'red-h' },
+yellow:{ t:'🟡 中期布局', c:'yellow-h' },
+green:{ t:'🟢 長期持有', c:'green-h' }
+};
 
-        html += `
-        <div class="card">
-            <div class="card-header profit-h">📊 累積總損益</div>
-            <div style="padding:25px; font-size:28px; font-weight:bold; color:${totalColor}; text-align:center;">
-                $ ${totalProfit.toLocaleString()}
-            </div>
-        </div>
-        `;
+let html = '';
 
-        document.getElementById('content').innerHTML = html;
-    }
+// ===== 紅黃綠區 =====
+['red','yellow','green'].forEach(lv => {
 
-    // Realtime 監聽
-    client.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public' }, () => {
-        loadData();
-    }).subscribe();
+const list = stocks.filter(s => s.level === lv && s.status === 'active');
 
-    loadData();
-    </script>
+html += `
+<div class="card">
+<div class="card-header ${config[lv].c}">${config[lv].t}</div>
+
+<table>
+<thead>
+<tr>
+<th>名稱</th>
+<th>日期</th>
+<th>價格</th>
+<th>分析</th>
+<th>狀態</th>
+</tr>
+</thead>
+
+<tbody>
+${list.length ? list.map(s => `
+<tr>
+<td><b>${s.name}</b></td>
+
+<td>${s.buy_date || '-'}</td>
+
+<td>
+${s.buy_price}
+<br>
+<small>
+🎯 ${s.take_profit ?? '-'} |
+🛑 ${s.stop_loss ?? '-'}
+</small>
+</td>
+
+<td style="max-width:250px;">${s.reason || '-'}</td>
+
+<td>${s.status}</td>
+
+</tr>
+`).join('') : `
+<tr><td colspan="5" class="empty">此區無資料</td></tr>
+`}
+</tbody>
+</table>
+</div>
+`;
+});
+
+// ===== 歷史 =====
+const history = stocks.filter(s => s.status === 'sold');
+
+let total = 0;
+
+html += `
+<div class="card">
+<div class="card-header history-h">📜 歷史交易</div>
+
+<table>
+<tr>
+<th>名稱</th>
+<th>買</th>
+<th>賣</th>
+<th>股數</th>
+<th>損益</th>
+</tr>
+`;
+
+if(history.length){
+
+history.forEach(s => {
+
+const profit = (s.sold_price - s.buy_price) * s.shares;
+total += profit;
+
+html += `
+<tr>
+<td>${s.name}</td>
+<td>${s.buy_price}</td>
+<td>${s.sold_price}</td>
+<td>${s.shares}</td>
+<td style="color:${profit>=0?'#ef4444':'#10b981'}">
+${profit>=0?'+':''}${profit.toLocaleString()}
+</td>
+</tr>
+`;
+});
+
+}else{
+html += `<tr><td colspan="5" class="empty">尚無資料</td></tr>`;
+}
+
+html += `</table></div>`;
+
+// ===== 總損益 =====
+html += `
+<div class="card">
+<div class="card-header profit-h">📊 總損益</div>
+
+<div style="padding:30px; text-align:center; font-size:28px;
+color:${total>=0?'#ef4444':'#10b981'}">
+
+$ ${total.toLocaleString()}
+
+</div>
+</div>
+`;
+
+document.getElementById('content').innerHTML = html;
+}
+
+// 即時更新
+client.channel('db')
+.on('postgres_changes',{event:'*',schema:'public'},loadData)
+.subscribe();
+
+loadData();
+
+</script>
+
 </body>
 </html>
